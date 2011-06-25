@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>A Basic Page</title>
+</head>
+<body id="index" class="home">
+    <div id="somediv">Hello there!</div>
+    <form action="basic_page.html" method="GET">
+        <label for="username">Username: </label>
+        <input type="text" name="user" id="username" />
+        
+        <label for="pass">Password: </label>
+        <input type="password" id="pass" />
+        
+        <textarea name="bio" id="bio_field">
+            Enter your bio.
+        </textarea>
+        
+        <label for="male_radio">Male</label>
+        <input type="radio" name="sex" value="male" id="male_radio" />
+        <label for="female_radio">Female</label>
+        <input type="radio" name="sex" value="female" id ="female_radio" />
+
+        <label for="bike_checkbox">I have a bike</label>
+        <input type="checkbox" name="vehicle" value="Bike" id="bike_checkbox" />
+        <label for="car_checkbox">I have a car</label>        
+        <input type="checkbox" name="vehicle" value="Car" id="car_checkbox" />
+
+        <select name="car_choice">
+          <option value="volvo">Volvo</option>
+          <option value="saab">Saab</option>
+          <option value="mercedes">Mercedes</option>
+          <option value="audi">Audi</option>
+        </select>
+        
+        <label for="fav_colors">Favorite Colors:
+        <select name="favorite_colors" id="fav_colors" multiple="multiple" size="10">
+            <option value="blue">Blue</option>
+            <option value="red" selected="selected">Red</option>
+            <option value="green">Green</option>
+            <option value="black">Black</option>
+        </select>
+
+        <input type="submit" name="submit" value="Submit!" />
+        <button type="submit" name="submit_tentative">Submit as tentative</button>
+    </form>
+    <a href="http://google.com/">Google</a>
+    
+    <div style="display: none">
+        <span id="hidden_text">Some spiffy hidden text</span>
+    </div>
+</body>
+</html>
