@@ -1,6 +1,6 @@
 # Lettuce Webdriver Setup
 
-Is an plug&play example how to combine Lettuce, Lettuce Webdriver and Selenium. Any improvments are very welcome.
+Is a plug&play example how to combine Lettuce, Lettuce Webdriver and Selenium. Any improvments are very welcome.
 
 ## Tools included
 
