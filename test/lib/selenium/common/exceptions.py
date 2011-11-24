@@ -15,8 +15,20 @@
 
 """Exceptions that may happen in all the webdriver code."""
 class WebDriverException(Exception):
-    def __init__(self, msg=None):
-        Exception.__init__(self, msg)
+    def __init__(self, msg=None, screen=None, stacktrace=None):
+        self.msg = msg
+        self.screen = screen
+        self.stacktrace = stacktrace
+
+    def __str__(self):
+        exception_msg = "Message: %s " % repr(self.msg)
+        if self.screen is not None:
+            exception_msg = "%s; Screenshot: available via screen " \
+                % exception_msg
+        if self.stacktrace is not None:
+            exception_msg = "%s; Stacktrace: %s " \
+                % (exception_msg, str(self.stacktrace))
+        return exception_msg
 
 class ErrorInResponseException(WebDriverException):
     """An error has occurred on the server side.
@@ -46,25 +58,41 @@ class NoSuchAttributeException(WebDriverException):
     pass
 
 class StaleElementReferenceException(WebDriverException):
+    """Indicates that a reference to an element is now "stale" --- the
+    element no longer appears on the DOM of the page."""
     pass
 
 class InvalidElementStateException(WebDriverException):
     pass
 
+class NoAlertPresentException(WebDriverException):
+    pass
+
 class ElementNotVisibleException(InvalidElementStateException):
+    """Thrown to indicate that although an element is present on the
+    DOM, it is not visible, and so is not able to be interacted
+    with."""
     pass
 
 class ElementNotSelectableException(InvalidElementStateException):
     pass
 
 class InvalidCookieDomainException(WebDriverException):
+    """Thrown when attempting to add a cookie under a different domain
+    than the current URL."""
     pass
 
 class UnableToSetCookieException(WebDriverException):
+    """Thrown when a driver fails to set a cookie."""
     pass
 
 class RemoteDriverServerException(WebDriverException):
     pass
 
 class TimeoutException(WebDriverException):
+    """Thrown when a command does not complete in enough time."""
+    pass
+
+class UnexpectedTagNameException(WebDriverException):
+    """Thrown when a support class did not get an expected web element"""
     pass

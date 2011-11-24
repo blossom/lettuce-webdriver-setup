@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import copy
 import tempfile
 import os
-import logging
 import zipfile
 import shutil
 import re
@@ -29,7 +28,7 @@ EXTENSION_NAME = "fxdriver@googlecode.com"
 class FirefoxProfile(object):
 
     ANONYMOUS_PROFILE_NAME   = "WEBDRIVER_ANONYMOUS_PROFILE"
-    default_preferences = {
+    DEFAULT_PREFERENCES = {
         "app.update.auto": "false",
         "app.update.enabled": "false",
         "browser.startup.page" : "0",
@@ -46,15 +45,17 @@ class FirefoxProfile(object):
         "browser.tabs.warnOnClose": "false",
         "browser.tabs.warnOnOpen": "false",
         "browser.startup.page": "0",
+        "browser.safebrowsing.malware.enabled": "false",
         "startup.homepage_welcome_url": "\"about:blank\"",
         "devtools.errorconsole.enabled": "true",
         "dom.disable_open_during_load": "false",
-        "dom.max_script_run_time": "30",
+        "extensions.autoDisableScopes" : 10,
         "extensions.logging.enabled": "true",
         "extensions.update.enabled": "false",
         "extensions.update.notifyUser": "false",
         "network.manage-offline-status": "false",
         "network.http.max-connections-per-server": "10",
+        "network.http.phishy-userpass-length": "255",
         "prompts.tab_modal.enabled": "false",
         "security.fileuri.origin_policy": "3",
         "security.fileuri.strict_origin_policy": "false",
@@ -69,29 +70,30 @@ class FirefoxProfile(object):
         "security.warn_viewing_mixed": "false",
         "security.warn_viewing_mixed.show_once": "false",
         "signon.rememberSignons": "false",
-        "toolkit.networkmanager.disable": "true",    
+        "toolkit.networkmanager.disable": "true",
+        "toolkit.telemetry.prompted": "true",
         "javascript.options.showInConsole": "true",
         "browser.dom.window.dump.enabled": "true",
         "webdriver_accept_untrusted_certs": "true",
         "webdriver_enable_native_events": "true",
-        "dom.max_script_run_time": "30"
+        "dom.max_script_run_time": "30",
         }
 
     def __init__(self,profile_directory=None):
-        """ Initialises a new instance of a Firefox Profile
-            args:
-                profile_directory: Directory of profile that you want to use. 
-                                This defaults to None and will create a new
-                                directory when object is created.
         """
+        Initialises a new instance of a Firefox Profile
+
+        :args:
+         - profile_directory: Directory of profile that you want to use. 
+           This defaults to None and will create a new
+           directory when object is created.
+        """
+        self.default_preferences = copy.deepcopy(FirefoxProfile.DEFAULT_PREFERENCES)
         self.profile_dir = profile_directory
         if self.profile_dir is None:
             self.profile_dir = self._create_tempfolder()
         else:
-            newprof = os.path.join(
-                tempfile.gettempdir(), "webdriver-py-profilecopy")
-            if os.path.exists(newprof):
-                shutil.rmtree(newprof)
+            newprof = os.path.join(tempfile.mkdtemp(), "webdriver-py-profilecopy")
             shutil.copytree(self.profile_dir, newprof)
             self.profile_dir = newprof
             self._read_existing_userjs()
@@ -99,31 +101,47 @@ class FirefoxProfile(object):
         self.userPrefs = os.path.join(self.profile_dir, "user.js")
 
     #Public Methods
-    def set_preference(self, key, value): 
-        """ sets the preference that we want in the profile."""
-        self.default_preferences[key] = str(value)
+    def set_preference(self, key, value):
+        """
+        sets the preference that we want in the profile.
+        """
+        clean_value = ''
+        if value is True:
+            clean_value = 'true'
+        elif value is False:
+            clean_value = 'false'
+        else:
+            clean_value = repr(value)
+
+        self.default_preferences[key] = clean_value
 
     def add_extension(self, extension=WEBDRIVER_EXT):
         self._install_extension(extension)
 
     def update_preferences(self):
         self._write_user_prefs(self.default_preferences)
-    
+
     #Properties
 
     @property
     def path(self):
-        """ Gets the profile directory that is currently being used"""
+        """
+        Gets the profile directory that is currently being used
+        """
         return self.profile_dir
 
     @property
     def port(self):
-        """ Gets the port that WebDriver is working on"""
+        """
+        Gets the port that WebDriver is working on
+        """
         return self._port
 
     @port.setter
     def port(self, port):
-        """ Sets the port that WebDriver will be running on """
+        """
+        Sets the port that WebDriver will be running on
+        """
         self._port = port
         self.default_preferences["webdriver_firefox_port"] =  str(self._port)
 
@@ -163,34 +181,41 @@ class FirefoxProfile(object):
     #Private Methods
 
     def _create_tempfolder(self):
-        """ Creates a temp folder to store User.js and the extension """
+        """
+        Creates a temp folder to store User.js and the extension
+        """
         return tempfile.mkdtemp()
 
     def _write_user_prefs(self, user_prefs):
-        """ writes the current user prefs dictionary to disk """
-        f = open(self.userPrefs, "w") 
+        """
+        writes the current user prefs dictionary to disk
+        """
+        f = open(self.userPrefs, "w")
         for pref in user_prefs.keys():
             f.write('user_pref("%s", %s);\n' % (pref, user_prefs[pref]))
 
         f.close()
 
     def _read_existing_userjs(self):
-        f = open(os.path.join(self.profile_dir, 'user.js'), "r")
-        tmp_usr = f.readlines()
-        f.close()
-        for usr in tmp_usr:
-            matches = re.search('user_pref\("(.*)",\s(.*)\)', usr)
-            self.default_preferences[matches.group(1)] = matches.group(2)
+        try:
+            f = open(os.path.join(self.profile_dir, 'user.js'), "r")
+            tmp_usr = f.readlines()
+            f.close()
+            for usr in tmp_usr:
+                matches = re.search('user_pref\("(.*)",\s(.*)\)', usr)
+                self.default_preferences[matches.group(1)] = matches.group(2)
+        except:
+            # The profile given hasn't had any changes made, i.e no users.js
+            pass
 
     def _install_extension(self, extension):
         tempdir = tempfile.mkdtemp()
-        ext_dir = "" 
+        ext_dir = ""
 
         if extension == WEBDRIVER_EXT:
             extension = os.path.join(os.path.dirname(__file__), WEBDRIVER_EXT)
             ext_dir = os.path.join(self.extensionsDir, EXTENSION_NAME)
-            
-        
+
         xpi = zipfile.ZipFile(extension)
 
         #Get directories ready
@@ -216,12 +241,12 @@ class FirefoxProfile(object):
         if os.path.exists(ext_dir):
             shutil.rmtree(ext_dir)
         shutil.copytree(tempdir, ext_dir)
+        shutil.rmtree(tempdir)
 
     def _read_id_from_install_rdf(self, installrdfpath):
         from rdflib import Graph
         rdf = Graph()
         installrdf = rdf.parse(file=file(installrdfpath))
-        id_ = ""
         for i in installrdf.all_nodes():
             if re.search(".*@.*\..*", i):
                 return i.decode()

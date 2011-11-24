@@ -22,13 +22,16 @@ from selenium.common.exceptions import NoSuchFrameException
 from selenium.common.exceptions import NoSuchWindowException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.common.exceptions import UnableToSetCookieException
+from selenium.common.exceptions import NoAlertPresentException
 from selenium.common.exceptions import ErrorInResponseException
 from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import WebDriverException
 
 
 class ErrorCode(object):
-    """Error codes defined in the WebDriver wire protocol."""
+    """
+    Error codes defined in the WebDriver wire protocol.
+    """
     # Keep in sync with org.openqa.selenium.remote.ErrorCodes and errorcodes.h
     SUCCESS = 0
     NO_SUCH_ELEMENT = 7
@@ -41,22 +44,30 @@ class ErrorCode(object):
     ELEMENT_IS_NOT_SELECTABLE = 15
     JAVASCRIPT_ERROR = 17
     XPATH_LOOKUP_ERROR = 19
+    TIMEOUT = 21
     NO_SUCH_WINDOW = 23
     INVALID_COOKIE_DOMAIN = 24
     UNABLE_TO_SET_COOKIE = 25
-    TIMEOUT = 28
+    UNEXPECTED_ALERT_OPEN = 26
+    NO_ALERT_OPEN = 27
+    SCRIPT_TIMEOUT = 28
+    INVALID_ELEMENT_COORDINATES = 29
+    INVALID_SELECTOR = 32
 
 
 class ErrorHandler(object):
-    """Handles errors returned by the WebDriver server."""
+    """
+    Handles errors returned by the WebDriver server.
+    """
     def check_response(self, response):
         """
         Checks that a JSON response from the WebDriver does not have an error.
-        Args:
-        response - The JSON response from the WebDriver server as a dictionary
-                object.
-        Raises:
-        If the response contains an error message.
+        
+        :Args:
+         - response - The JSON response from the WebDriver server as a dictionary
+           object.
+        
+        :Raises: If the response contains an error message.
         """
         status = response['status']
         if status == ErrorCode.SUCCESS:
@@ -73,17 +84,21 @@ class ErrorHandler(object):
         elif status == ErrorCode.ELEMENT_NOT_VISIBLE:
             exception_class = ElementNotVisibleException
         elif status == ErrorCode.INVALID_ELEMENT_STATE:
-            exception_class = WebDriverException 
+            exception_class = WebDriverException
         elif status == ErrorCode.ELEMENT_IS_NOT_SELECTABLE:
             exception_class = ElementNotSelectableException
         elif status == ErrorCode.INVALID_COOKIE_DOMAIN:
-            exception_class = WebDriverException 
+            exception_class = WebDriverException
         elif status == ErrorCode.UNABLE_TO_SET_COOKIE:
-            exception_class = WebDriverException 
+            exception_class = WebDriverException
         elif status == ErrorCode.TIMEOUT:
+            exception_class = TimeoutException
+        elif status == ErrorCode.SCRIPT_TIMEOUT:
             exception_class = TimeoutException
         elif status == ErrorCode.UNKNOWN_ERROR:
             exception_class = WebDriverException
+        elif status == ErrorCode.NO_ALERT_OPEN:
+            exception_class = NoAlertPresentException
         else:
             exception_class = WebDriverException
         value = response['value']
@@ -94,7 +109,21 @@ class ErrorHandler(object):
         message = ''
         if 'message' in value:
             message = value['message']
-        # TODO:  What about 'screen' and 'stackTrace'?
+
+        screen = None
+        if 'screen' in value:
+            screen = value['screen']
+
+        stacktrace = None
+        if 'stackTrace' in value:
+            zeroeth = value['stackTrace'][0]
+            if zeroeth.has_key('methodName'):
+                stacktrace = "Method %s threw an error in %s" % \
+                    (zeroeth['methodName'],
+                    self._value_or_default(zeroeth, 'fileName', '[No file name]'))
         if exception_class == ErrorInResponseException:
             raise exception_class(response, message)
-        raise exception_class(message)
+        raise exception_class(message, screen, stacktrace)
+
+    def _value_or_default(self, obj, key, default):
+      return obj[key] if obj.has_key(key) else default

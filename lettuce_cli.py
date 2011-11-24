@@ -19,7 +19,6 @@ import os
 import sys
 import optparse
 
-# load lib/test foalder
 root_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(root_dir, 'test', 'lib'))
 
@@ -30,8 +29,7 @@ def main(args=sys.argv[1:]):
     base_path = os.path.join(os.path.dirname(os.curdir), 'test', 'features')
     parser = optparse.OptionParser(
         usage="%prog or type %prog -h (--help) for help",
-        version=lettuce.version
-    )
+        version=lettuce.version)
 
     parser.add_option("-v", "--verbosity",
                       dest="verbosity",
@@ -56,12 +54,6 @@ def main(args=sys.argv[1:]):
                       help='Write JUnit XML to this file. Defaults to '
                       'lettucetests.xml')
 
-    parser.add_option("--tags",
-                      action="append",
-                      dest="tags_to_run",
-                      default=[],
-                      help='Comma separated list of tags, run if any found, multiple uses of this argument mean logical AND')
-
     options, args = parser.parse_args()
     if args:
         base_path = os.path.abspath(args[0])
@@ -71,15 +63,13 @@ def main(args=sys.argv[1:]):
     except ValueError:
         pass
 
-    run_controller = lettuce.RunController()
-    tag_checker = lettuce.core.TagChecker(options.tags_to_run)
-    run_controller.add(tag_checker)
-
-    runner = lettuce.Runner(base_path, scenarios=options.scenarios,
-                            verbosity=options.verbosity,
-                            enable_xunit=options.enable_xunit,
-                            xunit_filename=options.xunit_file,
-                            run_controller = run_controller)
+    runner = lettuce.Runner(
+        base_path,
+        scenarios=options.scenarios,
+        verbosity=options.verbosity,
+        enable_xunit=options.enable_xunit,
+        xunit_filename=options.xunit_file,
+    )
 
     result = runner.run()
     if not result or result.steps != result.steps_passed:

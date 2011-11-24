@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import warnings
 
 """WebElement implementation."""
 from command import Command
-from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchAttributeException
-
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 
 
 class WebElement(object):
@@ -60,28 +59,15 @@ class WebElement(object):
         if resp['value'] is None:
             attributeValue = None
         else:
-            attributeValue = str(resp['value'])
+            attributeValue = unicode(resp['value'])
             if type(resp['value']) is bool:
                 attributeValue = attributeValue.lower()
 
         return attributeValue
 
-    def toggle(self):
-        """Toggles the element state."""
-        warnings.warn("This method has been deprecated and removed soon.\
-                        Please use 'click'", DeprecationWarning)
-        resp = self._execute(Command.TOGGLE_ELEMENT)
-        return resp['value']
-
     def is_selected(self):
         """Whether the element is selected."""
         return self._execute(Command.IS_ELEMENT_SELECTED)['value']
-
-    def select(self):
-        """Selects an element."""
-        warnings.warn("This method has been deprecated and removed soon.\
-                        Please use 'click'", DeprecationWarning)
-        self._execute(Command.SET_ELEMENT_SELECTED)
 
     def is_enabled(self):
         """Whether the element is enabled."""
@@ -127,7 +113,7 @@ class WebElement(object):
     def find_elements_by_xpath(self, xpath):
         """Finds elements within the elements by xpath."""
         return self.find_elements(by=By.XPATH, value=xpath)
-    
+
     def find_element_by_class_name(self, name):
         """Finds an element by their class name."""
         return self.find_element(by=By.CLASS_NAME, value=name)
@@ -139,14 +125,25 @@ class WebElement(object):
     def find_element_by_css_selector(self, css_selector):
         """Find and return an element by CSS selector."""
         return self.find_element(by=By.CSS_SELECTOR, value=css_selector)
-    
+
     def find_elements_by_css_selector(self, css_selector):
         """Find and return list of multiple elements by CSS selector."""
         return self.find_elements(by=By.CSS_SELECTOR, value=css_selector)
 
     def send_keys(self, *value):
         """Simulates typing into the element."""
-        self._execute(Command.SEND_KEYS_TO_ELEMENT, {'value': value})
+        typing = []
+        for val in value:
+            if isinstance(val, Keys):
+                typing.append(val)
+            elif isinstance(val, int):
+                val = str(val)
+                for i in range(len(val)):
+                    typing.append(val[i])
+            else:
+                for i in range(len(val)):
+                    typing.append(val[i])
+        self._execute(Command.SEND_KEYS_TO_ELEMENT, {'value': typing})
 
     # RenderedWebElement Items
     def is_displayed(self):

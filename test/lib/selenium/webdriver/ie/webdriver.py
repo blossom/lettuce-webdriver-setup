@@ -18,9 +18,12 @@
 from selenium.webdriver.common import utils
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.remote.command import Command
+from selenium.common.exceptions import WebDriverException
 from ctypes import *
 import time
 import os
+import base64
 
 DEFAULT_TIMEOUT = 30
 DEFAULT_PORT = 0
@@ -31,9 +34,15 @@ class WebDriver(RemoteWebDriver):
         self.port = port
         if self.port == 0:
             self.port = utils.free_port()
-        
+
         # Create IE Driver instance of the unmanaged code
-        self.iedriver = CDLL(os.path.join(os.path.dirname(__file__), "IEDriver.dll"))
+        try:
+            self.iedriver = CDLL(os.path.join(os.path.dirname(__file__),"win32", "IEDriver.dll"))
+        except WindowsError:
+            try:
+                self.iedriver = CDLL(os.path.join(os.path.dirname(__file__),"x64", "IEDriver.dll"))
+            except WindowsError:
+                raise WebDriverException("Unable to load the IEDriver.dll component")
         self.ptr = self.iedriver.StartServer(self.port)
 
         seconds = 0
@@ -43,12 +52,29 @@ class WebDriver(RemoteWebDriver):
                 raise RuntimeError("Unable to connect to IE")
             time.sleep(1)
 
-        RemoteWebDriver.__init__(self,
-			    command_executor='http://localhost:%d' % self.port,
-			    desired_capabilities=DesiredCapabilities.INTERNETEXPLORER) 
+        RemoteWebDriver.__init__(
+            self,
+            command_executor='http://localhost:%d' % self.port,
+            desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
 
     def quit(self):
         RemoteWebDriver.quit(self)
         self.iedriver.StopServer(self.ptr)
         del self.iedriver
         del self.ptr
+
+    def save_screenshot(self, filename):
+        """
+        Gets the screenshot of the current window. Returns False if there is
+        any IOError, else returns True. Use full paths in your filename.
+        """
+        png = RemoteWebDriver.execute(self, Command.SCREENSHOT)['value']
+        try:
+            f = open(filename, 'wb')
+            f.write(base64.decodestring(png))
+            f.close()
+        except IOError:
+            return False
+        finally:
+            del png
+        return True
