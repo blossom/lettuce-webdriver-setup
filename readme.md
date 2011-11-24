@@ -5,15 +5,15 @@ Is a plug&play example how to combine Lettuce, Lettuce Webdriver and Selenium. A
 ## Tools included
 
 * [lettuce](http://lettuce.it/)
-* [lettuce_webdriver](https://github.com/bbangert/lettuce_webdriver) (patched version for selenium2.0rc3) 
-* [selenium2.0rc3](http://pypi.python.org/pypi/selenium)
+* [lettuce_webdriver](https://github.com/bbangert/lettuce_webdriver)
+* [selenium2.0](http://pypi.python.org/pypi/selenium)
 
 ## Instructions
 
-To run the test suite call `python lettuce.py`. All features like `test/features/*.feature` will be executed.
+To run the test suite call `python lettuce_cli.py`. All features like `test/features/*.feature` will be executed.
 Steps can be added to `test/features/step_definitions`. This setup already includes an example.
 
-The command-line interface `lettuce.py` is basically the same as in `test/lib/lettuce/lettuce_cli.py`, except it adds the `test/lib` directory to the python path and sets the base path to `test/features` instead of `features`.
+The command-line interface `lettuce_cli.py` is basically the same as in `test/lib/lettuce/lettuce_cli.py`, except it adds the `test/lib` directory to the python path and sets the base path to `test/features` instead of `features`.
 
 ## Background
 
