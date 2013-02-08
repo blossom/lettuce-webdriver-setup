@@ -5,10 +5,10 @@ Feature: Demo
 
     Scenario: Search on google for blossom
       Given I go to "http://www.google.at/"
-      When I fill in field with class "gsfi" with "blossom.io"
+      When I fill in field with class "gbqfif" with "blossom.io"
       Then I should see "www.blossom.io" within 2 second
 
     Scenario: Search on google for flask
       Given I go to "http://google.at"
-      When I fill in field with class "gsfi" with "flask"
+      When I fill in field with class "gbqfif" with "flask"
       Then I should see "flask.pocoo.org" within 2 second

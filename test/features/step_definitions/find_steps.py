@@ -11,6 +11,6 @@ def find_field_by_class(browser, attribute):
 def fill_in_textfield_by_class(step, field_name, value):
     with AssertContextManager(step):
         text_field = find_field_by_class(world.browser, field_name)
-        assert_false(step, text_field == False,'Can not find a field named "%s"' % field_name)
+        assert_false(step, text_field is False,'Can not find a field named "%s"' % field_name)
         text_field.clear()
         text_field.send_keys(value)
