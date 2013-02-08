@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # <Lettuce - Behaviour Driven Development for python>
-# Copyright (C) <2010-2011>  Gabriel Falcão <gabriel@nacaolivre.org>
+# Copyright (C) <2010-2012>  Gabriel Falcão <gabriel@nacaolivre.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -74,9 +74,6 @@ def get_terminal_size_unix():
         except:
             pass
     if not cr:
-        try:
-            cr = (os.getenv('LINES'), os.getenv('COLUMNS'))
-        except:
-            cr = (25, 80)
+        cr = (os.getenv('LINES', 25), os.getenv('COLUMNS', 80))
 
     return int(cr[1]), int(cr[0])

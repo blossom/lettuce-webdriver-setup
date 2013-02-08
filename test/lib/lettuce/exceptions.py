@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # <Lettuce - Behaviour Driven Development for python>
-# Copyright (C) <2010-2011>  Gabriel Falcão <gabriel@nacaolivre.org>
+# Copyright (C) <2010-2012>  Gabriel Falcão <gabriel@nacaolivre.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import traceback
+from lettuce.strings import utf8_string
 
 
 class NoDefinitionFound(Exception):
@@ -35,10 +36,12 @@ class ReasonToFail(object):
     AssertionError raised within a step definition.  With these data
     lettuce show detailed traceback to user in a nice representation.
     """
-    def __init__(self, exc):
+    def __init__(self, step, exc):
+        self.step = step
         self.exception = exc
-        self.cause = unicode(exc)
-        self.traceback = traceback.format_exc(exc)
+        if isinstance(exc.message, basestring):
+            self.cause = utf8_string(exc.message)
+        self.traceback = utf8_string(traceback.format_exc(exc))
 
 
 class LettuceSyntaxError(SyntaxError):

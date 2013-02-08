@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # <Lettuce - Behaviour Driven Development for python>
-# Copyright (C) <2010-2011>  Gabriel Falcão <gabriel@nacaolivre.org>
+# Copyright (C) <2010-2012>  Gabriel Falcão <gabriel@nacaolivre.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,19 +44,22 @@ class Main(object):
     @classmethod
     def _add_method(cls, name, where, when):
         def method(self, fn):
-            CALLBACK_REGISTRY.append_to(where, when.format(self.name), fn)
+            CALLBACK_REGISTRY.append_to(where, when % {'0': self.name}, fn)
+            return fn
+
         method.__name__ = method.fn_name = name
         setattr(cls, name, method)
 
 for name, where, when in (
-        ('all', 'all', '{0}'),
-        ('each_step', 'step', '{0}_each'),
-        ('each_scenario', 'scenario', '{0}_each'),
-        ('each_feature', 'feature', '{0}_each'),
-        ('harvest', 'harvest', '{0}'),
-        ('each_app', 'app', '{0}_each'),
-        ('runserver', 'runserver', '{0}'),
-        ('handle_request', 'handle_request', '{0}'),
+        ('all', 'all', '%(0)s'),
+        ('each_step', 'step', '%(0)s_each'),
+        ('each_scenario', 'scenario', '%(0)s_each'),
+        ('each_background', 'background', '%(0)s_each'),
+        ('each_feature', 'feature', '%(0)s_each'),
+        ('harvest', 'harvest', '%(0)s'),
+        ('each_app', 'app', '%(0)s_each'),
+        ('runserver', 'runserver', '%(0)s'),
+        ('handle_request', 'handle_request', '%(0)s'),
         ('outline', 'scenario', 'outline')):
     Main._add_method(name, where, when)
 

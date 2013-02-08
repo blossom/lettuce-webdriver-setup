@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # <Lettuce - Behaviour Driven Development for python>
-# Copyright (C) <2010-2011>  Gabriel Falcão <gabriel@nacaolivre.org>
+# Copyright (C) <2010-2012>  Gabriel Falcão <gabriel@nacaolivre.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,15 @@
 import re
 import time
 import unicodedata
+
+
+def utf8_string(s):
+    if isinstance(s, str):
+        s = s.decode("utf-8")
+
+    elif isinstance(s, unicode):
+        s = s.encode("utf-8")
+    return s
 
 
 def escape_if_necessary(what):
@@ -74,7 +83,7 @@ def remove_it(string, what):
 
 def column_width(string):
     l = 0
-    for c in string:
+    for c in unicode(string):
         if unicodedata.east_asian_width(c) in "WF":
             l += 2
         else:
@@ -96,7 +105,7 @@ def getlen(string):
 
 
 def dicts_to_string(dicts, order):
-    escape = "#{%s}" % str(time.time())
+    escape = "#{%s}" % unicode(time.time())
 
     def enline(line):
         return unicode(line).replace("|", escape)
@@ -133,7 +142,7 @@ def dicts_to_string(dicts, order):
 
 
 def parse_hashes(lines):
-    escape = "#{%s}" % str(time.time())
+    escape = "#{%s}" % unicode(time.time())
 
     def enline(line):
         return unicode(line.replace("\\|", escape)).strip()

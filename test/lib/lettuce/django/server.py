@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # <Lettuce - Behaviour Driven Development for python>
-# Copyright (C) <2010-2011>  Gabriel Falcão <gabriel@nacaolivre.org>
+# Copyright (C) <2010-2012>  Gabriel Falcão <gabriel@nacaolivre.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,7 +31,10 @@ from django.core.servers.basehttp import WSGIServer
 from django.core.servers.basehttp import ServerHandler
 from django.core.servers.basehttp import WSGIRequestHandler
 from django.core.servers.basehttp import WSGIServerException
-from django.core.servers.basehttp import AdminMediaHandler
+try:
+    from django.core.servers.basehttp import AdminMediaHandler
+except ImportError:
+    AdminMediaHandler = None
 try:
     from django.contrib.staticfiles.handlers import StaticFilesHandler
 except ImportError:
@@ -43,7 +46,13 @@ try:
 except ImportError:
     pass
 
+from lettuce.django import mail
 from lettuce.registry import call_hook
+
+
+def create_mail_queue():
+    mail.queue = multiprocessing.Queue()
+    return mail.queue
 
 
 class LettuceServerException(WSGIServerException):
@@ -99,16 +108,23 @@ class ThreadedServer(multiprocessing.Process):
     Runs django's builtin in background
     """
     lock = multiprocessing.Lock()
+    daemon = True
 
-    def __init__(self, address, port, *args, **kw):
+    def __init__(self, address, port, mail_queue, *args, **kw):
         multiprocessing.Process.__init__(self)
         self.address = address
         self.port = port
+        self.mail_queue = mail_queue
+
+    def configure_mail_queue(self):
+        mail.queue = self.mail_queue
+        settings.EMAIL_BACKEND = \
+            'lettuce.django.mail.backends.QueueEmailBackend'
 
     @staticmethod
     def get_real_address(address):
-        if address == '0.0.0.0':
-            address = 'localhost'
+        if address == '0.0.0.0' or address == 'localhost':
+            address = '127.0.0.1'
 
         return address
 
@@ -117,7 +133,7 @@ class ThreadedServer(multiprocessing.Process):
 
         while True:
             time.sleep(0.1)
-            http = httplib.HTTPConnection(address, self.port)
+            http = httplib.HTTPConnection(address, self.port, timeout=1)
             try:
                 http.request("GET", "/")
             except socket.error:
@@ -136,7 +152,8 @@ class ThreadedServer(multiprocessing.Process):
 
     def should_serve_admin_media(self):
         try:
-            return ('django.contrib.admin' in settings.INSTALLED_APPS or
+            return (('django.contrib.admin' in settings.INSTALLED_APPS and
+                     AdminMediaHandler) or
                     getattr(settings, 'LETTUCE_SERVE_ADMIN_MEDIA', False))
         except ImportError:
             return False
@@ -157,15 +174,19 @@ class ThreadedServer(multiprocessing.Process):
 
         open(pidfile, 'w').write(unicode(os.getpid()))
 
+        self.configure_mail_queue()
+
         connector = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         try:
             s = connector.connect((self.address, self.port))
-            print s
             self.lock.release()
             os.kill(os.getpid(), 9)
         except socket.error:
             pass
+
+        finally:
+            self.lock.release()
 
         try:
             server_address = (self.address, self.port)
@@ -178,6 +199,11 @@ class ThreadedServer(multiprocessing.Process):
 
         handler = WSGIHandler()
         if self.should_serve_admin_media():
+            if not AdminMediaHandler:
+                raise LettuceServerException(
+                    "AdminMediaHandler is not available in this version of "
+                    "Django. Please set LETTUCE_SERVE_ADMIN_MEDIA = False "
+                    "in your Django settings.")
             admin_media_path = ''
             handler = AdminMediaHandler(handler, admin_media_path)
 
@@ -205,7 +231,8 @@ class Server(object):
     def __init__(self, address='0.0.0.0', port=None):
         self.port = int(port or getattr(settings, 'LETTUCE_SERVER_PORT', 8000))
         self.address = unicode(address)
-        self._actual_server = ThreadedServer(self.address, self.port)
+        queue = create_mail_queue()
+        self._actual_server = ThreadedServer(self.address, self.port, queue)
 
     def start(self):
         """Starts the webserver thread, and waits it to be available"""

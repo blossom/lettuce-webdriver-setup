@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # <Lettuce - Behaviour Driven Development for python>
-# Copyright (C) <2010-2011>  Gabriel Falcão <gabriel@nacaolivre.org>
+# Copyright (C) <2010-2012>  Gabriel Falcão <gabriel@nacaolivre.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,14 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-version = '0.1.33'
-release = 'barium'
+version = '0.2.14'
+release = 'kryptonite'
 
 import os
 import sys
-from datetime import datetime
+import traceback
+try:
+    from imp import reload
+except ImportError:
+    # python 2.5 fallback
+    pass
 
-from lettuce import fs
+from datetime import datetime
+import random
 
 from lettuce.core import Feature, TotalResult
 
@@ -35,9 +41,19 @@ from lettuce.registry import call_hook
 from lettuce.registry import STEP_REGISTRY
 from lettuce.registry import CALLBACK_REGISTRY
 from lettuce.exceptions import StepLoadingError
-from lettuce.plugins import xunit_output
-
+from lettuce.plugins import (
+    xunit_output,
+    autopdb
+)
+from lettuce import fs
 from lettuce import exceptions
+
+try:
+    from colorama import init as ms_windows_workaround
+    ms_windows_workaround()
+except ImportError:
+    pass
+
 
 __all__ = [
     'after',
@@ -69,13 +85,16 @@ class Runner(object):
     Takes a base path as parameter (string), so that it can look for
     features and step definitions on there.
     """
-    def __init__(self, base_path, scenarios=None, verbosity=0,
-                 enable_xunit=False, xunit_filename=None):
+    def __init__(self, base_path, scenarios=None, verbosity=0, random=False,
+                 enable_xunit=False, xunit_filename=None, tags=None,
+                 failfast=False, auto_pdb=False):
         """ lettuce.Runner will try to find a terrain.py file and
         import it from within `base_path`
         """
 
+        self.tags = tags
         self.single_feature = None
+
         if os.path.isfile(base_path) and os.path.exists(base_path):
             self.single_feature = base_path
             base_path = os.path.dirname(base_path)
@@ -84,6 +103,9 @@ class Runner(object):
         self.loader = fs.FeatureLoader(base_path)
         self.verbosity = verbosity
         self.scenarios = scenarios and map(int, scenarios.split(",")) or None
+        self.failfast = failfast
+        if auto_pdb:
+            autopdb.enable(self)
 
         sys.path.remove(base_path)
 
@@ -97,6 +119,8 @@ class Runner(object):
             from lettuce.plugins import shell_output as output
         else:
             from lettuce.plugins import colored_shell_output as output
+
+        self.random = random
 
         if enable_xunit:
             xunit_output.enable(filename=xunit_filename)
@@ -116,41 +140,51 @@ class Runner(object):
             print "Error loading step definitions:\n", e
             return
 
-        call_hook('before', 'all')
-
         results = []
         if self.single_feature:
             features_files = [self.single_feature]
         else:
             features_files = self.loader.find_feature_files()
+            if self.random:
+                random.shuffle(features_files)
 
         if not features_files:
             self.output.print_no_features_found(self.loader.base_dir)
             return
+
+        call_hook('before', 'all')
 
         failed = False
         try:
             for filename in features_files:
                 feature = Feature.from_file(filename)
                 results.append(
-                    feature.run(self.scenarios))
+                    feature.run(self.scenarios,
+                                tags=self.tags,
+                                random=self.random,
+                                failfast=self.failfast))
 
         except exceptions.LettuceSyntaxError, e:
             sys.stderr.write(e.msg)
             failed = True
         except:
-            e = sys.exc_info()[1]
-            print "Died with %s" % str(e)
-            traceback.print_exc()
+            if not self.failfast:
+                e = sys.exc_info()[1]
+                print "Died with %s" % str(e)
+                traceback.print_exc()
+            else:
+                print
+                print ("Lettuce aborted running any more tests "
+                       "because was called with the `--failfast` option")
+
             failed = True
 
         finally:
+            total = TotalResult(results)
+            call_hook('after', 'all', total)
+
             if failed:
                 raise SystemExit(2)
-
-            total = TotalResult(results)
-
-            call_hook('after', 'all', total)
 
             finished_at = datetime.now()
             time_took = finished_at - started_at
