@@ -67,7 +67,7 @@ def should_see_link_text(step, link_text, link_url):
 
 @step('I should see a link that contains the text "(.*?)" and the url "(.*?)"$')
 def should_include_link_text(step, link_text, link_url):
-    return world.browser.find_element_by_xpath('//a[@href="%s"][contains(., %s)]' % 
+    return world.browser.find_element_by_xpath('//a[@href="%s"][contains(., %s)]' %
         (link_url, link_text))
 
 
@@ -157,7 +157,7 @@ def fill_in_textfield(step, field_name, value):
         text_field = find_field(world.browser, 'text', field_name) or \
             find_field(world.browser, 'textarea', field_name) or \
             find_field(world.browser, 'password', field_name)
-        assert_false(step, text_field == False,'Can not find a field named "%s"' % field_name)
+        assert_false(step, text_field is False,'Can not find a field named "%s"' % field_name)
         text_field.clear()
         text_field.send_keys(value)
 
@@ -173,7 +173,8 @@ def press_button(step, value):
 def check_checkbox(step, value):
     with AssertContextManager(step):
         check_box = find_field(world.browser, 'checkbox', value)
-        check_box.select()
+        if not check_box.is_selected():
+            check_box.click()
 
 
 @step('I uncheck "(.*?)"$')
@@ -181,7 +182,7 @@ def uncheck_checkbox(step, value):
     with AssertContextManager(step):
         check_box = find_field(world.browser, 'checkbox', value)
         if check_box.is_selected():
-            check_box.toggle()
+            check_box.click()
 
 
 @step('The "(.*?)" checkbox should be checked$')
@@ -200,7 +201,7 @@ def assert_not_checked_checkbox(step, value):
 def select_single_item(step, option_name, select_name):
     with AssertContextManager(step):
         option_box = find_option(world.browser, select_name, option_name)
-        option_box.select()
+        option_box.click()
 
 
 @step('I select the following from "(.*?)"$')
