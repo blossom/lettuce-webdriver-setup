@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # <Lettuce - Behaviour Driven Development for python>
-# Copyright (C) <2010-2011>  Gabriel Falcão <gabriel@nacaolivre.org>
+# Copyright (C) <2010-2012>  Gabriel Falcão <gabriel@nacaolivre.org>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.join(root_dir, 'test', 'lib'))
 
 import lettuce
 
+
 def main(args=sys.argv[1:]):
     # modified base path to run test/features instead of features
     base_path = os.path.join(os.path.dirname(os.curdir), 'test', 'features')
@@ -41,6 +42,21 @@ def main(args=sys.argv[1:]):
                       default=None,
                       help='Comma separated list of scenarios to run')
 
+    parser.add_option("-t", "--tag",
+                      dest="tags",
+                      default=None,
+                      action='append',
+                      help='Tells lettuce to run the specified tags only; '
+                      'can be used multiple times to define more tags'
+                      '(prefixing tags with "-" will exclude them and '
+                      'prefixing with "~" will match approximate words)')
+
+    parser.add_option("-r", "--random",
+                      dest="random",
+                      action="store_true",
+                      default=False,
+                      help="Run scenarios in a more random order to avoid interference")
+
     parser.add_option("--with-xunit",
                       dest="enable_xunit",
                       action="store_true",
@@ -54,7 +70,19 @@ def main(args=sys.argv[1:]):
                       help='Write JUnit XML to this file. Defaults to '
                       'lettucetests.xml')
 
-    options, args = parser.parse_args()
+    parser.add_option("--failfast",
+                      dest="failfast",
+                      default=False,
+                      action="store_true",
+                      help='Stop running in the first failure')
+
+    parser.add_option("--pdb",
+                      dest="auto_pdb",
+                      default=False,
+                      action="store_true",
+                      help='Launches an interactive debugger upon error')
+
+    options, args = parser.parse_args(args)
     if args:
         base_path = os.path.abspath(args[0])
 
@@ -63,17 +91,26 @@ def main(args=sys.argv[1:]):
     except ValueError:
         pass
 
+    tags = None
+    if options.tags:
+        tags = [tag.strip('@') for tag in options.tags]
+
     runner = lettuce.Runner(
         base_path,
         scenarios=options.scenarios,
         verbosity=options.verbosity,
+        random=options.random,
         enable_xunit=options.enable_xunit,
         xunit_filename=options.xunit_file,
+        failfast=options.failfast,
+        auto_pdb=options.auto_pdb,
+        tags=tags,
     )
 
     result = runner.run()
-    if not result or result.steps != result.steps_passed:
-        raise SystemExit(1)
+    failed = result is None or result.steps != result.steps_passed
+    raise SystemExit(int(failed))
 
 if __name__ == '__main__':
     main()
+
