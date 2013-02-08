@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# Copyright 2011-2013 Software freedom conservancy
+# Copyright 2012-2013 Software freedom conservancy
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,45 +18,32 @@ import base64
 import httplib
 from selenium.webdriver.remote.command import Command
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.common.exceptions import WebDriverException
 from service import Service
-from options import Options
 
 class WebDriver(RemoteWebDriver):
     """
-    Controls the ChromeDriver and allows you to drive the browser.
+    Wrapper to communicate with PhantomJS through Ghostdriver.
 
-    You will need to download the ChromeDriver executable from
-    http://code.google.com/p/chromedriver/downloads/list
+    You will need to follow all the directions here:
+    https://github.com/detro/ghostdriver
     """
 
-    def __init__(self, executable_path="chromedriver", port=0,
-                 chrome_options=None, service_args=None,
-                 desired_capabilities=None, service_log_path=None):
+    def __init__(self, executable_path="phantomjs",
+                 port=0, desired_capabilities=DesiredCapabilities.PHANTOMJS):
         """
-        Creates a new instance of the chrome driver.
+        Creates a new instance of the PhantomJS / Ghostdriver.
 
-        Starts the service and then creates new instance of chrome driver.
+        Starts the service and then creates new instance of the driver.
 
         :Args:
          - executable_path - path to the executable. If the default is used it assumes the executable is in the $PATH
          - port - port you would like the service to run, if left as 0, a free port will be found.
          - desired_capabilities: Dictionary object with non-browser specific
            capabilities only, such as "proxy" or "loggingPref".
-         - chrome_options: this takes an instance of ChromeOptions
         """
-        if chrome_options is None:
-            options = Options()
-        else:
-            options = chrome_options
-
-        if desired_capabilities is not None:
-          desired_capabilities.update(options.to_capabilities())
-        else:
-          desired_capabilities = options.to_capabilities()
-
-        self.service = Service(executable_path, port=port,
-            service_args=service_args, log_path=service_log_path)
+        self.service = Service(executable_path, port=port)
         self.service.start()
 
         try:
@@ -65,13 +52,14 @@ class WebDriver(RemoteWebDriver):
                 desired_capabilities=desired_capabilities)
         except:
             self.quit()
-            raise 
+            raise
+
         self._is_remote = False
 
     def quit(self):
         """
-        Closes the browser and shuts down the ChromeDriver executable
-        that is started when starting the ChromeDriver
+        Closes the browser and shuts down the PhantomJS executable
+        that is started when starting the PhantomJS
         """
         try:
             RemoteWebDriver.quit(self)
@@ -80,3 +68,9 @@ class WebDriver(RemoteWebDriver):
             pass
         finally:
             self.service.stop()
+
+    def __del__(self):
+        try:
+            self.service.stop()
+        except:
+            pass

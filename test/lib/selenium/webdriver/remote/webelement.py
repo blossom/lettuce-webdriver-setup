@@ -1,5 +1,4 @@
-# Copyright 2008-2009 WebDriver committers
-# Copyright 2008-2009 Google Inc.
+# Copyright 2008-2013 Software freedom conservancy
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +14,15 @@
 
 
 """WebElement implementation."""
+import os
+import zipfile
+from StringIO import StringIO
+import base64
+
+
 from command import Command
-from selenium.common.exceptions import NoSuchAttributeException
+from selenium.common.exceptions import WebDriverException 
+from selenium.common.exceptions import InvalidSelectorException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
@@ -132,6 +138,13 @@ class WebElement(object):
 
     def send_keys(self, *value):
         """Simulates typing into the element."""
+        # transfer file to another machine only if remote driver is used
+        # the same behaviour as for java binding
+        if self.parent._is_remote:
+            local_file = LocalFileDetector.is_local_file(*value)
+            if local_file is not None:
+                value = self._upload(local_file)
+
         typing = []
         for val in value:
             if isinstance(val, Keys):
@@ -151,6 +164,15 @@ class WebElement(object):
         return self._execute(Command.IS_ELEMENT_DISPLAYED)['value']
 
     @property
+    def location_once_scrolled_into_view(self):
+        """CONSIDERED LIABLE TO CHANGE WITHOUT WARNING. Use this to discover where on the screen an
+        element is so that we can click it. This method should cause the element to be scrolled
+        into view.
+
+        Returns the top lefthand corner location on the screen, or None if the element is not visible"""
+        return self._execute(Command.GET_ELEMENT_LOCATION_ONCE_SCROLLED_INTO_VIEW)['value']
+
+    @property
     def size(self):
         """ Returns the size of the element """
         size = self._execute(Command.GET_ELEMENT_SIZE)['value']
@@ -167,7 +189,10 @@ class WebElement(object):
     @property
     def location(self):
         """ Returns the location of the element in the renderable canvas"""
-        return self._execute(Command.GET_ELEMENT_LOCATION)['value']
+        old_loc = self._execute(Command.GET_ELEMENT_LOCATION)['value']
+        new_loc = {"x": old_loc['x'],
+                   "y": old_loc['y']}
+        return new_loc
 
     @property
     def parent(self):
@@ -176,6 +201,9 @@ class WebElement(object):
     @property
     def id(self):
         return self._id
+
+    def __eq__(self, element):
+        return self._id == element.id
 
     # Private Methods
     def _execute(self, command, params=None):
@@ -194,9 +222,62 @@ class WebElement(object):
         return self._parent.execute(command, params)
 
     def find_element(self, by=By.ID, value=None):
+        if isinstance(by, tuple) or isinstance(value, int) or value==None:
+            raise InvalidSelectorException("Invalid locator values passed in")
+        
         return self._execute(Command.FIND_CHILD_ELEMENT,
                              {"using": by, "value": value})['value']
 
     def find_elements(self, by=By.ID, value=None):
+        if isinstance(by, tuple) or isinstance(value, int) or value==None:
+            raise InvalidSelectorException("Invalid locator values passed in")
+        
         return self._execute(Command.FIND_CHILD_ELEMENTS,
                              {"using": by, "value": value})['value']
+
+    def _upload(self, filename):
+        fp = StringIO()
+        zipped = zipfile.ZipFile(fp, 'w', zipfile.ZIP_DEFLATED)
+        zipped.write(filename, os.path.split(filename)[1])
+        zipped.close()
+        try:
+            return self._execute(Command.UPLOAD_FILE, 
+                            {'file': base64.encodestring(fp.getvalue())})['value']
+        except WebDriverException as e:
+            if "Unrecognized command: POST" in e.__str__():
+                return filename
+            elif "Command not found: POST " in e.__str__():
+                return filename
+            elif '{"status":405,"value":["GET","HEAD","DELETE"]}' in e.__str__():
+                return filename
+            else:
+                raise e
+
+class LocalFileDetector(object):
+
+    @classmethod
+    def is_local_file(cls, *keys):
+        file_path = ''
+        typing = []
+        for val in keys:
+            if isinstance(val, Keys):
+                typing.append(val)
+            elif isinstance(val, int):
+                val = str(val)
+                for i in range(len(val)):
+                    typing.append(val[i])
+            else:
+                for i in range(len(val)):
+                    typing.append(val[i])
+        file_path = ''.join(typing)
+
+        if file_path is '':
+            return None
+
+        try:
+          if os.path.exists(file_path):
+              return file_path
+        except:
+          pass
+        return None
+

@@ -18,6 +18,7 @@ import socket
 def free_port():
         free_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         free_socket.bind(('127.0.0.1', 0))
+        free_socket.listen(5)
         port = free_socket.getsockname()[1]
         free_socket.close()
         return port
@@ -33,3 +34,13 @@ def is_connectable(port):
         except socket.error:
             return False
 
+def is_url_connectable(port):
+    import urllib2
+    try:
+        res = urllib2.urlopen("http://localhost:%s/status" % port)
+        if res.getcode() == 200:
+            return True
+        else:
+            return False
+    except:
+        return False

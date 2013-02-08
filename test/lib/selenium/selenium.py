@@ -1,6 +1,6 @@
 
 """
-Copyright 2011 Software Freedom Conservatory.
+Copyright 2011 Software Freedom Conservancy.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -167,7 +167,7 @@ class selenium(object):
     
     """
 
-### This part is hard-coded in the XSL
+    ### This part is hard-coded in the XSL
     def __init__(self, host, port, browserStartCommand, browserURL):
         self.host = host
         self.port = port
@@ -179,10 +179,13 @@ class selenium(object):
     def setExtensionJs(self, extensionJs):
         self.extensionJs = extensionJs
         
-    def start(self, browserConfigurationOptions=None):
+    def start(self, browserConfigurationOptions=None, driver=None):
         start_args = [self.browserStartCommand, self.browserURL, self.extensionJs]
         if browserConfigurationOptions:
           start_args.append(browserConfigurationOptions)
+        if driver:
+          id = driver.desired_capabilities['webdriver.remote.sessionid']
+          start_args.append('webdriver.remote.sessionid=%s' % id)
         result = self.get_string("getNewBrowserSession", start_args)
         try:
             self.sessionId = result
