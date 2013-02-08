@@ -6,7 +6,9 @@ Is a plug&play example how to combine Lettuce, Lettuce Webdriver and Selenium. A
 
 * [lettuce](http://lettuce.it/)
 * [lettuce_webdriver](https://github.com/bbangert/lettuce_webdriver)
-* [selenium2.0](http://pypi.python.org/pypi/selenium)
+* [selenium](http://pypi.python.org/pypi/selenium)
+* [fuzzywuzzy](https://github.com/seatgeek/fuzzywuzzy)
+* [nose](http://readthedocs.org/docs/nose/)
 
 ## Instructions
 
