@@ -110,7 +110,7 @@ class FirefoxBinary(object):
                 key = OpenKey(HKEY_LOCAL_MACHINE, path)
                 command = QueryValue(key, "")
                 break
-            except WindowsError:
+            except OSError:
                 pass
         else:
             return ""
@@ -128,11 +128,14 @@ class FirefoxBinary(object):
         elif platform.system() == 'Java' and os._name == 'nt':
             start_cmd = self._default_windows_location()
         else:
-            # Maybe iceweasel (Debian) is another candidate...
-            for ffname in ["firefox2", "firefox", "firefox-3.0", "firefox-4.0"]:
+            for ffname in ["firefox", "iceweasel"]:
                 start_cmd = self.which(ffname)
                 if start_cmd is not None:
                     break
+            else:
+                # couldn't find firefox on the system path
+                raise RuntimeError("Could not find firefox in your system PATH." + 
+                    " Please specify the firefox binary location or install firefox")
         return start_cmd
 
     def _default_windows_location(self):

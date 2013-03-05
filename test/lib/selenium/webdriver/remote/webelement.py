@@ -203,7 +203,10 @@ class WebElement(object):
         return self._id
 
     def __eq__(self, element):
-        return self._id == element.id
+        if self._id == element.id:
+            return True
+        else:
+            return self._execute(Command.ELEMENT_EQUALS, {'other': element.id})['value']
 
     # Private Methods
     def _execute(self, command, params=None):
@@ -275,7 +278,7 @@ class LocalFileDetector(object):
             return None
 
         try:
-          if os.path.exists(file_path):
+          if os.path.isfile(file_path):
               return file_path
         except:
           pass
